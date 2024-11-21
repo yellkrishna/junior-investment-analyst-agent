@@ -294,7 +294,7 @@ stock_analysis_tool = FunctionTool(
 )
 
 stock_analysis_agent = AssistantAgent(
-    name="Stock_Analysis_Agent",
+    name="Technical_Analysis_Agent",
     model_client=model_client,
     tools=[stock_analysis_tool],
     description="Agent specialized in technical analysis of a company's stock. Uses the company's ticker and a benchmark ticker to analyze stock price trends, calculate technical indicators, generate plots, and return the results in the form of a dictioanry to be used by report agent to generate a report."

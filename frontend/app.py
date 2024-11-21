@@ -23,7 +23,7 @@ nest_asyncio.apply()
 
 # Set the page configuration as the first Streamlit command
 st.set_page_config(
-    page_title="Financial Analysis Agent",
+    page_title="Investment Analysis Agent",
     page_icon="💹",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -64,7 +64,7 @@ if css_file.exists():
 st.title("💹 Financial Analysis Agent")
 st.markdown("""
 Enter a prompt below to perform fundamental and technical analysis.
-The agent will generate a comprehensive financial report along with relevant plots.
+The agent will generate a comprehensive financial report along with relevant plots and tables.
 """)
 
 # Input Section within a form
@@ -99,25 +99,23 @@ async def run_agent(prompt):
     
     # Initialize the team within the async function
     selector_prompt = (
-    "You are coordinating a team of agents with the following roles:{roles}.\n"
-    "- **Google_Search_Agent**: Conducts online searches to gather relevant financial documents and data.\n"
-    "- **Financial_Analysis_Agent**: Analyzes financial ratios and metrics based on the data provided.\n"
-    "- **Stock_Analysis_Agent**: Performs stock performance and technical analysis.\n"
-    "Based on the conversation history, select the next agent from the following participants to contribute:\n"
-    "{participants}\n\n"
-    "Consider the context and ensure that the Report_Agent is selected when the conversation requires compiling the final report.\n\n"
+    "You are coordinating a team of agents with the following roles:\n"
+    "{roles}\n"
+    "Based on the conversation history provided below, select the most appropriate agent from the following participants to contribute next:\n"
+    "{participants}\n"
+    "Consider the context and ensure that the selected agent is the most suitable to continue the conversation.\n"
     "Conversation History:\n"
-    "{history}\n\n"
-    "Select the most appropriate agent to continue the conversation."
-)
+    "{history}\n"
+    "Please provide the name of the agent who should speak next. Select the best option and only select ONE agent at a time."
+    )
     model_client = OpenAIChatCompletionClient(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
     # Define individual termination conditions
-    text_termination = TextMentionTermination("TERMINATE")
-    max_messages = 50  # Set the maximum number of messages
-    message_termination = MaxMessageTermination(max_messages=max_messages)
+    #text_termination = TextMentionTermination("TERMINATE")
+    #max_messages = 50  # Set the maximum number of messages
+    #message_termination = MaxMessageTermination(max_messages=max_messages)
 
     # Combine termination conditions using logical OR
-    termination = text_termination | message_termination
+    #termination = text_termination | message_termination
 
     # Create the SelectorGroupChat
     team = SelectorGroupChat(
@@ -154,7 +152,7 @@ async def run_agent(prompt):
     # Create a new conversation with the report agent
     response = await report_agent.on_messages([user_message], None)
     final_report = response.chat_message.content
-    
+    st.session_state['report'] = final_report    
     print("Final Report:\n", final_report)
     # Save the final report to a Markdown file
     md_filename = 'Financial_Report.md'
@@ -166,6 +164,8 @@ async def run_agent(prompt):
     pdf_filename = 'Financial_Report.pdf'
     markdown_to_pdf(final_report, pdf_filename)
     print(f"The financial report has been converted to '{pdf_filename}'.")
+
+    return final_result
 
 
 # Function to list existing plots in a specified directory
@@ -200,24 +200,18 @@ def clean_content_string(content_str):
 
 # Helper function to extract report and plots from TaskResult
 def extract_report_and_plots(task_result, project_dir):
-    import collections
-
     report = ""
     technical_plots = {}
     fundamental_plots = {}
     data_tables = {}
 
     # Define the agents that provide plot data
-    plot_providers = ['Financial_Analysis_Agent', 'Stock_Analysis_Agent']
+    plot_providers = ['Fundamental_Analysis_Agent', 'Technical_Analysis_Agent']
 
-    # Iterate through all messages to find the report, data, and plot paths
+    # Iterate through all messages to find data and plot paths
     for message in task_result.messages:
-        # Extract report from TextMessages from various agents
-        if isinstance(message, TextMessage) and message.source in ['Financial_Analysis_Agent', 'Stock_Analysis_Agent', 'Google_Search_Agent']:
-            report += message.content + "\n\n"  # Concatenate the reports
-
         # Extract plots and data from specified ToolCallResultMessages
-        elif isinstance(message, ToolCallResultMessage) and message.source in plot_providers:
+        if isinstance(message, ToolCallResultMessage) and message.source in plot_providers:
             try:
                 content = message.content
 
@@ -275,7 +269,7 @@ def extract_report_and_plots(task_result, project_dir):
     existing_technical_plots = list_existing_plots(project_dir, plot_type='technical_plots')
     technical_plots.update(existing_technical_plots)
 
-    return report, fundamental_plots, technical_plots, data_tables
+    return fundamental_plots, technical_plots, data_tables
 
 # Handle form submission
 if submit_button:
@@ -285,162 +279,118 @@ if submit_button:
             task_result = asyncio.run(run_agent(prompt))
             st.session_state['task_result'] = task_result
 
-            if task_result.stop_reason == "Text 'TERMINATE' mentioned":
-                # Extract the report and plots
-                report, fundamental_plots, technical_plots, data_tables = extract_report_and_plots(task_result, project_dir)
+            fundamental_plots, technical_plots, data_tables = extract_report_and_plots(task_result, project_dir)
+            # **Debug Statements**
+            #st.markdown("### **Debug Information**")
+            #st.write(f"**task_result:** {st.session_state['task_result']}")
+            #st.write(f"**Type of task_result:** {type(st.session_state['task_result'])}")
+            #st.write(f"**Attributes of task_result:** {dir(st.session_state['task_result'])}")
+            #st.markdown("---")
+            #st.write(f"**Stop Reason:** {st.session_state['task_result'].stop_reason}")
 
-                # Store extracted data in session state
-                st.session_state['report'] = report
-                st.session_state['fundamental_plots'] = {name: path for name, path in fundamental_plots.items()}
-                st.session_state['fundamental_plot_names'] = list(st.session_state['fundamental_plots'].keys())
-                st.session_state['technical_plots'] = {name: path for name, path in technical_plots.items()}
-                st.session_state['technical_plot_names'] = list(st.session_state['technical_plots'].keys())
-                st.session_state['data_tables'] = data_tables
-            else:
-                st.error(f"The analysis task did not complete successfully. Reason: {task_result.stop_reason}")
-                st.session_state['report'] = ""
-                st.session_state['fundamental_plots'] = {}
-                st.session_state['fundamental_plot_names'] = []
-                st.session_state['technical_plots'] = {}
-                st.session_state['technical_plot_names'] = []
-                st.session_state['data_tables'] = {}
-        except RuntimeError as e:
-            # Handle the case where the event loop is already running
-            if 'This event loop is already running' in str(e):
-                loop = asyncio.get_event_loop()
-                task = loop.create_task(run_agent(prompt))
-                task_result = loop.run_until_complete(task)
-                st.session_state['task_result'] = task_result
+            # Store extracted data in session state
+            st.session_state['fundamental_plots'] = {name: path for name, path in fundamental_plots.items()}
+            st.session_state['fundamental_plot_names'] = list(st.session_state['fundamental_plots'].keys())
+            st.session_state['technical_plots'] = {name: path for name, path in technical_plots.items()}
+            st.session_state['technical_plot_names'] = list(st.session_state['technical_plots'].keys())
+            st.session_state['data_tables'] = data_tables
 
-                if task_result.stop_reason == "Text 'TERMINATE' mentioned":
-                    # Extract the report and plots
-                    report, fundamental_plots, technical_plots, data_tables = extract_report_and_plots(task_result, project_dir)
-
-                    # Store extracted data in session state
-                    st.session_state['report'] = report
-                    st.session_state['fundamental_plots'] = {name: path for name, path in fundamental_plots.items()}
-                    st.session_state['fundamental_plot_names'] = list(st.session_state['fundamental_plots'].keys())
-                    st.session_state['technical_plots'] = {name: path for name, path in technical_plots.items()}
-                    st.session_state['technical_plot_names'] = list(st.session_state['technical_plots'].keys())
-                    st.session_state['data_tables'] = data_tables
-                else:
-                    st.error(f"The analysis task did not complete successfully. Reason: {task_result.stop_reason}")
-                    st.session_state['report'] = ""
-                    st.session_state['fundamental_plots'] = {}
-                    st.session_state['fundamental_plot_names'] = []
-                    st.session_state['technical_plots'] = {}
-                    st.session_state['technical_plot_names'] = []
-                    st.session_state['data_tables'] = {}
-            else:
-                st.error(f"An unexpected error occurred: {e}")
-                st.session_state['task_result'] = None
-                st.session_state['report'] = ""
-                st.session_state['fundamental_plots'] = {}
-                st.session_state['fundamental_plot_names'] = []
-                st.session_state['technical_plots'] = {}
-                st.session_state['technical_plot_names'] = []
-                st.session_state['data_tables'] = {}
         except Exception as e:
             st.error(f"An error occurred: {e}")
             st.session_state['task_result'] = None
-            st.session_state['report'] = ""
             st.session_state['fundamental_plots'] = {}
             st.session_state['fundamental_plot_names'] = []
             st.session_state['technical_plots'] = {}
             st.session_state['technical_plot_names'] = []
             st.session_state['data_tables'] = {}
+            st.session_state['report'] = ""
 
-# After handling form submission, display the report and plots if available
-if st.session_state['task_result']:
+# After handling form submission, display the plots and data tables if available
+if st.session_state.get('task_result'):
     # **Debug Statements**
-    #st.markdown("### **Debug Information**")
-    #st.write(f"**task_result:** {st.session_state['task_result']}")
-    #st.write(f"**Type of task_result:** {type(st.session_state['task_result'])}")
-    #st.write(f"**Attributes of task_result:** {dir(st.session_state['task_result'])}")
-    #st.markdown("---")
-    #st.write(f"**Stop Reason:** {st.session_state['task_result'].stop_reason}")
+    st.markdown("### **Debug Information**")
+    st.write(f"**task_result:** {st.session_state['task_result']}")
+    st.write(f"**Type of task_result:** {type(st.session_state['task_result'])}")
+    st.write(f"**Attributes of task_result:** {dir(st.session_state['task_result'])}")
+    st.markdown("---")
+    st.write(f"**Stop Reason:** {st.session_state['task_result'].stop_reason}")
+    # Display the Report
+    if st.session_state.get('report'):
+        st.subheader("📄 Financial Report")
+        st.markdown(st.session_state['report'], unsafe_allow_html=True)  # Use markdown to render the report with formatting
 
-    # Check if the task completed successfully
-    if st.session_state['task_result'].stop_reason == "Text 'TERMINATE' mentioned":
-        # Display the Report
-        if st.session_state['report']:
-            st.subheader("📄 Financial Report")
-            st.markdown(st.session_state['report'])  # Use markdown to render the report with formatting
-
-            # Display data tables if available
-            if st.session_state['data_tables']:
-                st.subheader("📊 Financial Data and Ratios")
-                for key, value in st.session_state['data_tables'].items():
-                    if isinstance(value, list) and all(isinstance(item, dict) for item in value):
-                        # Convert list of dictionaries to DataFrame
-                        df = pd.DataFrame(value)
-                        # Convert 'None' strings to actual NoneType
-                        df.replace('None', np.nan, inplace=True)
-                        # Convert date strings to datetime objects if necessary
-                        if 'end' in df.columns:
-                            df['end'] = pd.to_datetime(df['end'], errors='coerce')
-                        # Handle special data types in DataFrame (e.g., Timestamp, nan)
-                        df.replace({pd.NaT: None, np.nan: None}, inplace=True)
-                        st.markdown(f"**{key.replace('_', ' ').title()}**")
-                        st.dataframe(df)
-                    else:
-                        # Display other data as needed
-                        st.markdown(f"**{key.replace('_', ' ').title()}:** {value}")
-
-            # Allow downloading the report
-            st.download_button(
-                label="Download Report",
-                data=st.session_state['report'],
-                file_name=f"financial_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                mime="text/plain",
-            )
-        else:
-            st.error("Failed to extract the financial report from the response.")
-
-        # Display Fundamental Analysis Plots
-        if st.session_state['fundamental_plots']:
-            st.subheader("📊 Fundamental Analysis Plots")
-            selected_fundamental_plot_name = st.selectbox(
-                "Select a fundamental analysis plot to display:",
-                st.session_state['fundamental_plot_names'],
-                key='fundamental_plot_selector'
-            )
-            if selected_fundamental_plot_name:
-                plot_path = st.session_state['fundamental_plots'][selected_fundamental_plot_name]
-                if os.path.exists(plot_path):
-                    st.image(plot_path, use_container_width=True)
-                else:
-                    st.error(f"Plot file not found: {plot_path}")
-        else:
-            st.info("No fundamental analysis plots were generated.")
-
-        # Display Technical Analysis Plots
-        if st.session_state['technical_plots']:
-            st.subheader("📈 Technical Analysis Plots")
-            selected_technical_plot_name = st.selectbox(
-                "Select a technical analysis plot to display:",
-                st.session_state['technical_plot_names'],
-                key='technical_plot_selector'
-            )
-            if selected_technical_plot_name:
-                plot_path = st.session_state['technical_plots'][selected_technical_plot_name]
-                if os.path.exists(plot_path):
-                    st.image(plot_path, use_container_width=True)
-                else:
-                    st.error(f"Plot file not found: {plot_path}")
-        else:
-            st.info("No technical analysis plots were generated.")
-
+        # Allow downloading the report as a Markdown file
+        st.download_button(
+            label="Download Report",
+            data=st.session_state['report'],
+            file_name=f"Financial_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+            mime="text/markdown",
+        )
     else:
-        st.error(f"The analysis task did not complete successfully. Reason: {st.session_state['task_result'].stop_reason}")
+        st.info("No report was generated.")
+        
+    # Display data tables if available
+    if st.session_state['data_tables']:
+        st.subheader("📊 Financial Data and Ratios")
+        for key, value in st.session_state['data_tables'].items():
+            if isinstance(value, list) and all(isinstance(item, dict) for item in value):
+                # Convert list of dictionaries to DataFrame
+                df = pd.DataFrame(value)
+                # Convert 'None' strings to actual NoneType
+                df.replace('None', np.nan, inplace=True)
+                # Convert date strings to datetime objects if necessary
+                if 'end' in df.columns:
+                    df['end'] = pd.to_datetime(df['end'], errors='coerce')
+                # Handle special data types in DataFrame (e.g., Timestamp, nan)
+                df.replace({pd.NaT: None, np.nan: None}, inplace=True)
+                st.markdown(f"**{key.replace('_', ' ').title()}**")
+                st.dataframe(df)
+            else:
+                # Display other data as needed
+                st.markdown(f"**{key.replace('_', ' ').title()}:** {value}")
+
+    # Display Fundamental Analysis Plots
+    if st.session_state['fundamental_plots']:
+        st.subheader("📊 Fundamental Analysis Plots")
+        selected_fundamental_plot_name = st.selectbox(
+            "Select a fundamental analysis plot to display:",
+            st.session_state['fundamental_plot_names'],
+            key='fundamental_plot_selector'
+        )
+        if selected_fundamental_plot_name:
+            plot_path = st.session_state['fundamental_plots'][selected_fundamental_plot_name]
+            if os.path.exists(plot_path):
+                st.image(plot_path, use_container_width=True)
+            else:
+                st.error(f"Plot file not found: {plot_path}")
+    else:
+        st.info("No fundamental analysis plots were generated.")
+
+    # Display Technical Analysis Plots
+    if st.session_state['technical_plots']:
+        st.subheader("📈 Technical Analysis Plots")
+        selected_technical_plot_name = st.selectbox(
+            "Select a technical analysis plot to display:",
+            st.session_state['technical_plot_names'],
+            key='technical_plot_selector'
+        )
+        if selected_technical_plot_name:
+            plot_path = st.session_state['technical_plots'][selected_technical_plot_name]
+            if os.path.exists(plot_path):
+                st.image(plot_path, use_container_width=True)
+            else:
+                st.error(f"Plot file not found: {plot_path}")
+    else:
+        st.info("No technical analysis plots were generated.")
+
 else:
-    if st.session_state['report'] or st.session_state['fundamental_plots'] or st.session_state['technical_plots']:
+    if st.session_state.get('fundamental_plots') or st.session_state.get('technical_plots'):
         st.warning("No analysis has been performed yet. Please enter a prompt and click 'Analyze'.")
 
 # Sidebar Information
 st.sidebar.header("About")
 st.sidebar.info("""
-**Financial Analysis Agent** performs fundamental and technical analysis to generate comprehensive financial reports and visualizations.
+**Financial Analysis Agent** performs fundamental and technical analysis to generate relevant plots and data tables.
 
 Developed by [Siva Yellepeddi](https://yourwebsite.com)
 """)

@@ -82,7 +82,7 @@ fundamental_analysis_tool = FunctionTool(
 )
 
 fundamental_analysis_agent = AssistantAgent(
-    name="Financial_Analysis_Agent",
+    name="Fundamental_Analysis_Agent",
     model_client=model_client,
     tools=[fundamental_analysis_tool],
     description=(
