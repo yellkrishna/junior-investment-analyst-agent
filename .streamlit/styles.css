@@ -1,0 +1,26 @@
+/* your_project/.streamlit/styles.css */
+
+/* Change the background color of the main content */
+body {
+    background-color: #f5f5f5;
+}
+
+/* Customize the title font and color */
+h1 {
+    color: #1f77b4;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Style the Analyze button */
+.stButton > button {
+    background-color: #1f77b4;
+    color: white;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 16px;
+}
+
+/* Hide Streamlit's default footer */
+footer {
+    visibility: hidden;
+}

@@ -5,6 +5,11 @@ from datetime import datetime
 import requests
 import logging
 from typing import Dict
+import os
+import matplotlib
+matplotlib.use('Agg')  # Use the 'Agg' backend for non-interactive plotting
+import matplotlib.pyplot as plt
+from .match_company_concepts import get_filings, download_filing, parse_filing_content
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -183,4 +188,129 @@ def calculate_financial_ratios(concepts: Dict[str, str], cik: str, ticker: str) 
     else:
         logger.info("Successfully calculated financial ratios.")
 
-    return final_ratios_df
+    # Fetch and parse filings for qualitative data
+    qualitative_data = {}
+    for filing_type in ['10-K', '10-Q']:
+        filings = get_filings(cik, filing_type=filing_type, count=1)
+        if not filings.empty:
+            filing = filings.iloc[0]
+            accession_number = filing['accessionNumber']
+            filing_content = download_filing(cik, accession_number)
+            if filing_content:
+                extracted_sections = parse_filing_content(filing_content)
+                if extracted_sections:
+                    qualitative_data[filing_type] = extracted_sections
+                else:
+                    logger.warning(f"No sections extracted from {filing_type} filing.")
+            else:
+                logger.warning(f"Failed to download content for {filing_type} filing {accession_number}.")
+        else:
+            logger.warning(f"No {filing_type} filings found for CIK {cik}.")
+
+
+    # Ensure the fundamental_plots directory exists
+    os.makedirs("fundamental_plots", exist_ok=True)
+
+    # Initialize the result dictionary
+    result = {}
+
+    # 1. Revenue Over Time
+    plt.figure(figsize=(14, 7))
+    plt.plot(merged_df.index, merged_df['Revenues'], marker='o', label='Revenues', color='blue')
+    plt.title(f"{ticker} - Revenues Over Time")
+    plt.xlabel("Year")
+    plt.ylabel("Revenues (USD)")
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.grid(True)
+    revenue_plot_file_path = f"fundamental_plots/{ticker}_Revenues_Over_Time.png"
+    plt.savefig(revenue_plot_file_path)
+    plt.close()
+    result["revenue_plot_file_path"] = revenue_plot_file_path
+
+    # 2. Net Income Over Time
+    plt.figure(figsize=(14, 7))
+    plt.plot(merged_df.index, merged_df['NetIncomeLoss'], marker='o', label='Net Income', color='green')
+    plt.title(f"{ticker} - Net Income Over Time")
+    plt.xlabel("Year")
+    plt.ylabel("Net Income (USD)")
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.grid(True)
+    net_income_plot_file_path = f"fundamental_plots/{ticker}_Net_Income_Over_Time.png"
+    plt.savefig(net_income_plot_file_path)
+    plt.close()
+    result["net_income_plot_file_path"] = net_income_plot_file_path
+
+    # 3. Total Assets Over Time
+    plt.figure(figsize=(14, 7))
+    plt.plot(merged_df.index, merged_df['Assets'], marker='o', label='Total Assets', color='orange')
+    plt.title(f"{ticker} - Total Assets Over Time")
+    plt.xlabel("Year")
+    plt.ylabel("Total Assets (USD)")
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.grid(True)
+    assets_plot_file_path = f"fundamental_plots/{ticker}_Total_Assets_Over_Time.png"
+    plt.savefig(assets_plot_file_path)
+    plt.close()
+    result["assets_plot_file_path"] = assets_plot_file_path
+
+    # 4. Year-over-Year Revenue Growth
+    plt.figure(figsize=(14, 7))
+    plt.bar(merged_df.index, merged_df['RevenueGrowth'], color='skyblue', label='Revenue Growth Rate')
+    plt.title(f"{ticker} - Year-over-Year Revenue Growth")
+    plt.xlabel("Year")
+    plt.ylabel("Revenue Growth Rate (%)")
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.grid(True, axis='y', linestyle='--', alpha=0.7)
+    revenue_growth_plot_file_path = f"fundamental_plots/{ticker}_Revenue_Growth_Rate.png"
+    plt.savefig(revenue_growth_plot_file_path)
+    plt.close()
+    result["revenue_growth_plot_file_path"] = revenue_growth_plot_file_path
+
+    # 5. Return on Equity (ROE) Over Time
+    plt.figure(figsize=(14, 7))
+    plt.plot(merged_df.index, merged_df['ROE'], marker='o', label='ROE', color='purple')
+    plt.title(f"{ticker} - Return on Equity (ROE) Over Time")
+    plt.xlabel("Year")
+    plt.ylabel("ROE (%)")
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.grid(True)
+    roe_plot_file_path = f"fundamental_plots/{ticker}_ROE_Over_Time.png"
+    plt.savefig(roe_plot_file_path)
+    plt.close()
+    result["roe_plot_file_path"] = roe_plot_file_path
+
+    # 6. Current Ratio Over Time
+    plt.figure(figsize=(14, 7))
+    plt.plot(merged_df.index, merged_df['CurrentRatio'], marker='o', label='Current Ratio', color='red')
+    plt.title(f"{ticker} - Current Ratio Over Time")
+    plt.xlabel("Year")
+    plt.ylabel("Current Ratio")
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.grid(True)
+    current_ratio_plot_file_path = f"fundamental_plots/{ticker}_Current_Ratio_Over_Time.png"
+    plt.savefig(current_ratio_plot_file_path)
+    plt.close()
+    result["current_ratio_plot_file_path"] = current_ratio_plot_file_path
+
+    # 7. Debt-to-Equity Ratio Over Time
+    plt.figure(figsize=(14, 7))
+    plt.plot(merged_df.index, merged_df['DebtToEquityRatio'], marker='o', label='Debt-to-Equity Ratio', color='brown')
+    plt.title(f"{ticker} - Debt-to-Equity Ratio Over Time")
+    plt.xlabel("Year")
+    plt.ylabel("Debt-to-Equity Ratio")
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.grid(True)
+    debt_to_equity_plot_file_path = f"fundamental_plots/{ticker}_Debt_to_Equity_Ratio_Over_Time.png"
+    plt.savefig(debt_to_equity_plot_file_path)
+    plt.close()
+    result["debt_to_equity_plot_file_path"] = debt_to_equity_plot_file_path
+
+    # Return both the ratios DataFrame and the qualitative data
+    return final_ratios_df, qualitative_data, result
