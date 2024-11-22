@@ -164,7 +164,7 @@ def analyze_stock(ticker: str, benchmark_ticker: str = '^GSPC') -> dict:
             result[key] = value.item()
 
     # Create a directory for plots
-    os.makedirs("coding", exist_ok=True)
+    os.makedirs("technical_plots", exist_ok=True)
 
     # Plot Close Price with Moving Averages and EMA
     plt.figure(figsize=(14, 7))
@@ -177,7 +177,7 @@ def analyze_stock(ticker: str, benchmark_ticker: str = '^GSPC') -> dict:
     plt.ylabel("Price ($)")
     plt.legend()
     plt.grid(True)
-    plot_file_path = f"coding/{ticker}_stockprice.png"
+    plot_file_path = f"technical_plots/{ticker}_stockprice.png"
     plt.savefig(plot_file_path)
     plt.close()
     result["plot_file_path"] = plot_file_path
@@ -191,7 +191,7 @@ def analyze_stock(ticker: str, benchmark_ticker: str = '^GSPC') -> dict:
     plt.ylabel("Cumulative Returns")
     plt.legend()
     plt.grid(True)
-    benchmark_plot_file_path = f"coding/{ticker}_vs_{benchmark_ticker}_returns.png"
+    benchmark_plot_file_path = f"technical_plots/{ticker}_vs_{benchmark_ticker}_returns.png"
     plt.savefig(benchmark_plot_file_path)
     plt.close()
     result["benchmark_plot_file_path"] = benchmark_plot_file_path
@@ -205,7 +205,7 @@ def analyze_stock(ticker: str, benchmark_ticker: str = '^GSPC') -> dict:
     plt.ylabel(f"{ticker} Daily Returns")
     plt.legend()
     plt.grid(True)
-    beta_plot_file_path = f"coding/{ticker}_beta.png"
+    beta_plot_file_path = f"technical_plots/{ticker}_beta.png"
     plt.savefig(beta_plot_file_path)
     plt.close()
     result["beta_plot_file_path"] = beta_plot_file_path
@@ -221,7 +221,7 @@ def analyze_stock(ticker: str, benchmark_ticker: str = '^GSPC') -> dict:
     plt.ylabel("Price ($)")
     plt.legend()
     plt.grid(True)
-    bb_plot_file_path = f"coding/{ticker}_bollinger_bands.png"
+    bb_plot_file_path = f"technical_plots/{ticker}_bollinger_bands.png"
     plt.savefig(bb_plot_file_path)
     plt.close()
     result["bollinger_bands_plot_file_path"] = bb_plot_file_path
@@ -236,7 +236,7 @@ def analyze_stock(ticker: str, benchmark_ticker: str = '^GSPC') -> dict:
     plt.ylabel("PercentB")
     plt.legend()
     plt.grid(True)
-    percentB_plot_file_path = f"coding/{ticker}_percentB.png"
+    percentB_plot_file_path = f"technical_plots/{ticker}_percentB.png"
     plt.savefig(percentB_plot_file_path)
     plt.close()
     result["percentB_plot_file_path"] = percentB_plot_file_path
@@ -251,7 +251,7 @@ def analyze_stock(ticker: str, benchmark_ticker: str = '^GSPC') -> dict:
     plt.ylabel("Stochastic %K")
     plt.legend()
     plt.grid(True)
-    stochastic_plot_file_path = f"coding/{ticker}_stochastic.png"
+    stochastic_plot_file_path = f"technical_plots/{ticker}_stochastic.png"
     plt.savefig(stochastic_plot_file_path)
     plt.close()
     result["stochastic_plot_file_path"] = stochastic_plot_file_path
@@ -264,7 +264,7 @@ def analyze_stock(ticker: str, benchmark_ticker: str = '^GSPC') -> dict:
     plt.ylabel("Momentum")
     plt.legend()
     plt.grid(True)
-    momentum_plot_file_path = f"coding/{ticker}_momentum.png"
+    momentum_plot_file_path = f"technical_plots/{ticker}_momentum.png"
     plt.savefig(momentum_plot_file_path)
     plt.close()
     result["momentum_plot_file_path"] = momentum_plot_file_path
@@ -279,20 +279,23 @@ def analyze_stock(ticker: str, benchmark_ticker: str = '^GSPC') -> dict:
     plt.ylabel("MACD")
     plt.legend()
     plt.grid(True)
-    macd_plot_file_path = f"coding/{ticker}_MACD.png"
+    macd_plot_file_path = f"technical_plots/{ticker}_MACD.png"
     plt.savefig(macd_plot_file_path)
     plt.close()
     result["macd_plot_file_path"] = macd_plot_file_path
 
     return result
 
-stock_analysis_tool = FunctionTool(analyze_stock, description="Analyze stock data and generate a plot")
-
 model_client = OpenAIChatCompletionClient(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
 
+stock_analysis_tool = FunctionTool(
+    analyze_stock,
+    description="Function to perform technical stock market analysis on a company's stock using its ticker and a benchmark ticker. Generates plots for various technical indicators and returns the calculated indicators."
+)
+
 stock_analysis_agent = AssistantAgent(
-    name="Stock_Analysis_Agent",
+    name="TechnicalStockAnalyst",
     model_client=model_client,
     tools=[stock_analysis_tool],
-    description="Analyze the technical financial indicators of a company based on its stock ticker and using a benchmark stock ticker (example- S&P 500: ^GSPC).",
+    description="Agent specialized in technical stock market analysis of a company's stock. Uses the company's ticker and a benchmark ticker to analyze stock price trends, calculate technical indicators, generate plots, and return the results in the form of a dictioanry to be used by report agent to generate a report."
 )

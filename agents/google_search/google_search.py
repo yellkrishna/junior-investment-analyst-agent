@@ -63,7 +63,9 @@ def google_search(query: str, num_results: int = 2, max_chars: int = 500) -> lis
 
 # Wrap the function tool to the functions
 google_search_tool = FunctionTool(
-    google_search, description="Search Google for information, returns results with a snippet and body content"
+    google_search,
+    description="Function to search Google for a company's stock ticker, benchmark ticker, and comprehensive information. "
+        "Returns top results with snippets and content relevant for financial and SWOT analysis."
 )
 
 # Create agents
@@ -73,5 +75,6 @@ search_agent = AssistantAgent(
     name="Google_Search_Agent",
     model_client=model_client,
     tools=[google_search_tool],
-    description="Search Google for information, returns top 2 results with a snippet and body content",
+    description="Agent specialized in retrieving a company's stock ticker, benchmark ticker, and comprehensive information via Google searches. "
+        "Provides top results with snippets and content to support financial analysis for fundamental analysis agent and technical analysis agent and SWOT analysis for report agent."
 )
