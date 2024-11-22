@@ -1,39 +1,27 @@
+# frontend/app.py
+
 import sys
 import os
 import streamlit as st
 import asyncio
-import nest_asyncio  # Import nest_asyncio
-from pathlib import Path
-from PIL import Image
-import io
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
-from autogen_agentchat.messages import TextMessage, ToolCallResultMessage, FunctionExecutionResult
-from autogen_agentchat.teams import SelectorGroupChat
-from autogen_ext.models import OpenAIChatCompletionClient
-from autogen_agentchat.task import TextMentionTermination, MaxMessageTermination
-import ast  # To safely evaluate string representations of Python literals
-import re
 import pandas as pd
 import numpy as np
-from markdown_pdf import MarkdownPdf, Section
+import nest_asyncio  # Import nest_asyncio
+from pathlib import Path
+from datetime import datetime
+from autogen_agentchat.messages import TextMessage
 from autogen_agentchat.teams import RoundRobinGroupChat
 
 # Apply nest_asyncio to allow nested event loops
 nest_asyncio.apply()
 
-# Set the page configuration as the first Streamlit command
-st.set_page_config(
-    page_title="Investment Analysis Agent",
-    page_icon="💹",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
 # Adjust the path to import from the project root
 current_dir = Path(__file__).parent
 project_dir = current_dir.parent
 sys.path.append(str(project_dir))
+
+# Import helper functions from utils.py
+from utils import load_css, list_existing_plots, clean_content_string, extract_report_and_plots
 
 # Initialize session state variables
 if 'task_result' not in st.session_state:
@@ -51,10 +39,13 @@ if 'technical_plot_names' not in st.session_state:
 if 'data_tables' not in st.session_state:
     st.session_state['data_tables'] = {}
 
-# Function to load custom CSS (if you have any)
-def load_css(css_path):
-    with open(css_path) as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+# Set the page configuration as the first Streamlit command
+st.set_page_config(
+    page_title="Investment Analysis Agent",
+    page_icon="💹",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 # Load custom CSS if it exists
 css_file = project_dir / '.streamlit' / 'styles.css'
@@ -76,7 +67,6 @@ with st.form(key='prompt_form'):
         height=150,
     )
     submit_button = st.form_submit_button(label='Analyze')
-
 
 # Function to run the agent asynchronously
 async def run_agent(prompt):
@@ -130,110 +120,6 @@ async def run_agent(prompt):
 
     return final_result
 
-
-# Function to list existing plots in a specified directory
-def list_existing_plots(project_dir, plot_type):
-    """
-    Scans the specified plot directory and returns a dictionary mapping
-    user-friendly plot names to their paths.
-    """
-    plots = {}
-    dir_path = project_dir / plot_type
-    if dir_path.exists():
-        for plot_file in dir_path.glob('*.png'):  # Adjust the pattern if plots are in different formats
-            plot_name = plot_file.stem.replace('_', ' ').title()
-            plots[plot_name] = str(plot_file)
-    else:
-        st.warning(f"Plot directory does not exist: {dir_path}")
-    return plots
-
-def clean_content_string(content_str):
-    # Replace Timestamp('...') with '...'
-    timestamp_pattern = r"Timestamp\('([^']+)'\)"
-    content_str = re.sub(timestamp_pattern, r"'\1'", content_str)
-
-    # Replace nan with None
-    content_str = content_str.replace('nan', 'None')
-
-    # Replace inf and -inf with None
-    content_str = content_str.replace('inf', 'None')
-    content_str = content_str.replace('-inf', 'None')
-
-    return content_str
-
-# Helper function to extract report and plots from TaskResult
-def extract_report_and_plots(task_result, project_dir):
-    report = ""
-    technical_plots = {}
-    fundamental_plots = {}
-    data_tables = {}
-
-    # Define the agents that provide plot data
-    plot_providers = ['FundamentalAnalyst', 'TechnicalStockAnalyst']
-
-    # Iterate through all messages to find data and plot paths
-    for message in task_result.messages:
-        # Extract plots and data from specified ToolCallResultMessages
-        if isinstance(message, ToolCallResultMessage) and message.source in plot_providers:
-            try:
-                content = message.content
-
-                if isinstance(content, list):
-                    for item in content:
-                        # Check if the item is a FunctionExecutionResult
-                        if isinstance(item, FunctionExecutionResult):
-                            content_str = item.content
-
-                            # Clean the content string
-                            content_str = clean_content_string(content_str)
-
-                            # Use ast.literal_eval to parse the content string safely
-                            try:
-                                data_dict = ast.literal_eval(content_str)
-
-                                # Recursively search for plot file paths and data tables
-                                def recursive_extract(d):
-                                    for key, value in d.items():
-                                        if key.endswith('_plot_file_path'):
-                                            # Convert relative paths to absolute paths
-                                            absolute_path = project_dir / value
-                                            plot_name = key.replace('_plot_file_path', '').replace('_', ' ').title()
-
-                                            # Determine plot type based on directory or key
-                                            if 'fundamental_plots' in value:
-                                                fundamental_plots[plot_name] = str(absolute_path)
-                                            elif 'technical_plots' in value:
-                                                technical_plots[plot_name] = str(absolute_path)
-                                            else:
-                                                # If unable to determine, default to fundamental plots
-                                                fundamental_plots[plot_name] = str(absolute_path)
-                                        elif isinstance(value, dict):
-                                            recursive_extract(value)
-                                        else:
-                                            data_tables[key] = value
-
-                                recursive_extract(data_dict)
-
-                            except Exception as e:
-                                st.error(f"Error parsing content from {message.source}: {e}")
-                        else:
-                            st.warning(f"Unexpected item type in content from {message.source}: {type(item)}")
-                else:
-                    st.warning(f"Unexpected content format from {message.source}: {type(content)}")
-
-            except Exception as e:
-                st.error(f"Error processing message from {message.source}: {e}")
-                continue
-
-    # Additionally, list existing plots from directories
-    existing_fundamental_plots = list_existing_plots(project_dir, plot_type='fundamental_plots')
-    fundamental_plots.update(existing_fundamental_plots)
-
-    existing_technical_plots = list_existing_plots(project_dir, plot_type='technical_plots')
-    technical_plots.update(existing_technical_plots)
-
-    return fundamental_plots, technical_plots, data_tables
-
 # Handle form submission
 if submit_button:
     with st.spinner('Analyzing... Please wait.'):
@@ -263,16 +149,8 @@ if submit_button:
 
 # After handling form submission, display the plots and data tables if available
 if st.session_state.get('task_result'):
-    # **Debug Statements**
-    #st.markdown("### **Debug Information**")
-    #st.write(f"**task_result:** {st.session_state['task_result']}")
-    #st.write(f"**Type of task_result:** {type(st.session_state['task_result'])}")
-    #st.write(f"**Attributes of task_result:** {dir(st.session_state['task_result'])}")
-    #st.markdown("---")
-    #st.write(f"**Stop Reason:** {st.session_state['task_result'].stop_reason}")
     # Display the Report
     if st.session_state.get('report'):
-        #st.subheader("📄 Financial Report")
         st.markdown(st.session_state['report'])  # Use markdown to render the report with formatting
 
         # Allow downloading the report as a Markdown file
@@ -302,8 +180,8 @@ if st.session_state.get('task_result'):
                 st.markdown(f"**{key.replace('_', ' ').title()}**")
                 st.dataframe(df)
             else:
-                # Display other data as needed
-                st.markdown(f"**{key.replace('_', ' ').title()}:** {value}")
+                # Skip entries that are not suitable for DataFrame
+                continue
 
     # Display Fundamental Analysis Plots
     if st.session_state['fundamental_plots']:

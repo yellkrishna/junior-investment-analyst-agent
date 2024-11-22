@@ -1,13 +1,10 @@
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.task import TextMentionTermination
-from autogen_agentchat.teams import RoundRobinGroupChat
-from autogen_core.components.tools import FunctionTool
 from autogen_ext.models import OpenAIChatCompletionClient
 from config import OPENAI_API_KEY, GOOGLE_API_KEY, GOOGLE_SEARCH_ENGINE_ID
 from agents.fundamental_analysis.fundamental_analysis_agent import fundamental_analysis_agent
 from agents.google_search.google_search import search_agent
 from agents.technical_analysis.technical_analysis_agent import stock_analysis_agent
-from agents.swot.swot_analysis import perform_swot_analysis
 
 #!pip install yfinance matplotlib pytz numpy pandas python-dotenv requests bs4
 # Create agents
@@ -21,7 +18,6 @@ report_agent = AssistantAgent(
         "SWOT analysis, and compares technical indicators with benchmarks, and incorporates information from Google searches "
         "to produce a cohesive and readable report. Be comprehensive and based on the indicators and fundamentals of the company.",
 )
-
 
 termination = TextMentionTermination("TERMINATE")
 
