@@ -17,6 +17,7 @@ import re
 import pandas as pd
 import numpy as np
 from markdown_pdf import MarkdownPdf, Section
+from autogen_agentchat.teams import RoundRobinGroupChat
 
 # Apply nest_asyncio to allow nested event loops
 nest_asyncio.apply()
@@ -76,15 +77,6 @@ with st.form(key='prompt_form'):
     )
     submit_button = st.form_submit_button(label='Analyze')
 
-def markdown_to_pdf(markdown_text, output_file):
-    # Initialize the MarkdownPdf object
-    pdf = MarkdownPdf()
-
-    # Add the Markdown content as a section
-    pdf.add_section(Section(markdown_text))
-
-    # Save the PDF to the specified file
-    pdf.save(output_file)
 
 # Function to run the agent asynchronously
 async def run_agent(prompt):
@@ -96,33 +88,9 @@ async def run_agent(prompt):
         report_agent,
         OPENAI_API_KEY
     )
-    
-    # Initialize the team within the async function
-    selector_prompt = (
-    "You are coordinating a team of agents with the following roles:\n"
-    "{roles}\n"
-    "Based on the conversation history provided below, select the most appropriate agent from the following participants to contribute next:\n"
-    "{participants}\n"
-    "Consider the context and ensure that the selected agent is the most suitable to continue the conversation.\n"
-    "Conversation History:\n"
-    "{history}\n"
-    "Please provide the name of the agent who should speak next. Select the best option and only select ONE agent at a time."
-    )
-    model_client = OpenAIChatCompletionClient(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
-    # Define individual termination conditions
-    #text_termination = TextMentionTermination("TERMINATE")
-    #max_messages = 50  # Set the maximum number of messages
-    #message_termination = MaxMessageTermination(max_messages=max_messages)
 
-    # Combine termination conditions using logical OR
-    #termination = text_termination | message_termination
-
-    # Create the SelectorGroupChat
-    team = SelectorGroupChat(
-        participants=[search_agent, fundamental_analysis_agent, stock_analysis_agent],
-        model_client=model_client,
-        selector_prompt=selector_prompt,
-        allow_repeated_speaker=False,
+    team = RoundRobinGroupChat(
+        [search_agent, fundamental_analysis_agent, stock_analysis_agent, report_agent],
         termination_condition=termination
     )
     
@@ -143,7 +111,7 @@ async def run_agent(prompt):
         "Please compile and generate the final financial report in Markdown format. "
         "Aggregate fundamental analysis data (financial ratios and qualitative insights), technical analysis results, "
         "SWOT analysis, and compare technical indicators with benchmarks, and incorporate information from Google searches "
-        "to produce a cohesive and readable report."
+        "to produce a comprehensive, cohesive and readable report."
     )
 
     formatted_prompt = report_prompt.format(conversation=conversation_history_str)
@@ -159,11 +127,6 @@ async def run_agent(prompt):
     with open(md_filename, 'w', encoding='utf-8') as md_file:
         md_file.write(final_report)
     print(f"The financial report has been saved as '{md_filename}'.")
-
-    # Convert the Markdown content to a PDF
-    pdf_filename = 'Financial_Report.pdf'
-    markdown_to_pdf(final_report, pdf_filename)
-    print(f"The financial report has been converted to '{pdf_filename}'.")
 
     return final_result
 
@@ -206,7 +169,7 @@ def extract_report_and_plots(task_result, project_dir):
     data_tables = {}
 
     # Define the agents that provide plot data
-    plot_providers = ['Fundamental_Analysis_Agent', 'Technical_Analysis_Agent']
+    plot_providers = ['FundamentalAnalyst', 'TechnicalStockAnalyst']
 
     # Iterate through all messages to find data and plot paths
     for message in task_result.messages:
@@ -280,13 +243,6 @@ if submit_button:
             st.session_state['task_result'] = task_result
 
             fundamental_plots, technical_plots, data_tables = extract_report_and_plots(task_result, project_dir)
-            # **Debug Statements**
-            #st.markdown("### **Debug Information**")
-            #st.write(f"**task_result:** {st.session_state['task_result']}")
-            #st.write(f"**Type of task_result:** {type(st.session_state['task_result'])}")
-            #st.write(f"**Attributes of task_result:** {dir(st.session_state['task_result'])}")
-            #st.markdown("---")
-            #st.write(f"**Stop Reason:** {st.session_state['task_result'].stop_reason}")
 
             # Store extracted data in session state
             st.session_state['fundamental_plots'] = {name: path for name, path in fundamental_plots.items()}
@@ -308,16 +264,16 @@ if submit_button:
 # After handling form submission, display the plots and data tables if available
 if st.session_state.get('task_result'):
     # **Debug Statements**
-    st.markdown("### **Debug Information**")
-    st.write(f"**task_result:** {st.session_state['task_result']}")
-    st.write(f"**Type of task_result:** {type(st.session_state['task_result'])}")
-    st.write(f"**Attributes of task_result:** {dir(st.session_state['task_result'])}")
-    st.markdown("---")
-    st.write(f"**Stop Reason:** {st.session_state['task_result'].stop_reason}")
+    #st.markdown("### **Debug Information**")
+    #st.write(f"**task_result:** {st.session_state['task_result']}")
+    #st.write(f"**Type of task_result:** {type(st.session_state['task_result'])}")
+    #st.write(f"**Attributes of task_result:** {dir(st.session_state['task_result'])}")
+    #st.markdown("---")
+    #st.write(f"**Stop Reason:** {st.session_state['task_result'].stop_reason}")
     # Display the Report
     if st.session_state.get('report'):
-        st.subheader("📄 Financial Report")
-        st.markdown(st.session_state['report'], unsafe_allow_html=True)  # Use markdown to render the report with formatting
+        #st.subheader("📄 Financial Report")
+        st.markdown(st.session_state['report'])  # Use markdown to render the report with formatting
 
         # Allow downloading the report as a Markdown file
         st.download_button(

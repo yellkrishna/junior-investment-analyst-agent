@@ -290,12 +290,12 @@ model_client = OpenAIChatCompletionClient(model="gpt-4o-mini", api_key=OPENAI_AP
 
 stock_analysis_tool = FunctionTool(
     analyze_stock,
-    description="Function to perform technical analysis on a company's stock using its ticker and a benchmark ticker. Generates plots for various technical indicators and returns the calculated indicators."
+    description="Function to perform technical stock market analysis on a company's stock using its ticker and a benchmark ticker. Generates plots for various technical indicators and returns the calculated indicators."
 )
 
 stock_analysis_agent = AssistantAgent(
-    name="Technical_Analysis_Agent",
+    name="TechnicalStockAnalyst",
     model_client=model_client,
     tools=[stock_analysis_tool],
-    description="Agent specialized in technical analysis of a company's stock. Uses the company's ticker and a benchmark ticker to analyze stock price trends, calculate technical indicators, generate plots, and return the results in the form of a dictioanry to be used by report agent to generate a report."
+    description="Agent specialized in technical stock market analysis of a company's stock. Uses the company's ticker and a benchmark ticker to analyze stock price trends, calculate technical indicators, generate plots, and return the results in the form of a dictioanry to be used by report agent to generate a report."
 )

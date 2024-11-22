@@ -66,7 +66,7 @@ def fundamental_analyzer(
     analysis_result = {
         'financial_ratios': financial_ratios_json,
         'qualitative_data': qualitative_data,
-        'fund. plots': fund_plots
+        'fundamental_plots': fund_plots
     }
 
     return analysis_result
@@ -77,17 +77,17 @@ fundamental_analysis_tool = FunctionTool(
     fundamental_analyzer,
     description=(
         "Function to perform fundamental analysis on a company using its stock ticker. "
-        "Returns a dictionary containing financial ratios (as a list of dictionaries) and qualitative data from filings, and paths to generated plots."
+        "Returns a dictionary containing fundamental financial ratios (as a list of dictionaries) and qualitative data from filings, and plots."
     )
 )
 
 fundamental_analysis_agent = AssistantAgent(
-    name="Fundamental_Analysis_Agent",
+    name="FundamentalAnalyst",
     model_client=model_client,
     tools=[fundamental_analysis_tool],
     description=(
         "Agent specialized in fundamental analysis of a company. "
-        "Uses the company's stock ticker to calculate key financial ratios over multiple time periods, "
+        "Uses the company's stock ticker to calculate key fundamental ratios over multiple time periods, "
         "extracts qualitative data from the latest 10-K and 10-Q filings, and generates relevant financial plots."
         "Returns result as a dictionary to be used by the report agent. You will NOT generate TERMINATE condition."
     )
