@@ -34,27 +34,27 @@ def fundamental_analyzer(
         'Assets', 'EarningsPerShareBasic'
     ]
 
-    # Step 1: Get CIK for the provided ticker
+    # Get CIK for the provided ticker
     cik = get_cik_for_ticker(ticker)
     if not cik:
         raise ValueError(f"Invalid ticker: {ticker}")
 
-    # Step 2: Fetch company facts
+    # Fetch company facts
     facts_json = fetch_company_facts(cik)
     if not facts_json:
         raise ValueError(f"Failed to fetch company facts for CIK: {cik}")
 
-    # Step 3: Extract US-GAAP concepts
+    # Extract US-GAAP concepts
     company_concepts = extract_us_gaap_concepts(facts_json)
     if not company_concepts:
         raise ValueError(f"No US-GAAP concepts found for CIK: {cik}")
 
-    # Step 4: Match company concepts to template concepts
+    # Match company concepts to template concepts
     matched_concepts = match_concepts(company_concepts, template_concepts)
     if not matched_concepts:
         raise ValueError(f"Failed to match company concepts for CIK: {cik}")
 
-    # Step 5: Calculate financial ratios and extract qualitative data
+    # Calculate financial ratios and extract qualitative data
     ratios_df, qualitative_data, fund_plots = calculate_financial_ratios(matched_concepts, cik, ticker)
     if ratios_df.empty:
         raise ValueError(f"Failed to calculate financial ratios for CIK: {cik}")

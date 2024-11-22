@@ -105,6 +105,7 @@ def extract_us_gaap_concepts(facts_json):
 
 # New functions to fetch and parse filings
 
+# Retrieves recent SEC filings for a company using its CIK.
 def get_filings(cik, filing_type='10-K', count=5):
     formatted_cik = format_cik(cik)
     submissions_url = f'https://data.sec.gov/submissions/CIK{formatted_cik}.json'
@@ -130,7 +131,7 @@ def get_filings(cik, filing_type='10-K', count=5):
         logger.error(f"An error occurred while fetching filings: {err}")
     return pd.DataFrame()
 
-
+# Downloads the main document of a filing based on its accession number.
 def download_filing(cik, accession_number):
     formatted_cik = format_cik(cik)
     index_url = f'https://www.sec.gov/Archives/edgar/data/{int(formatted_cik)}/{accession_number}/index.json'
@@ -156,6 +157,8 @@ def download_filing(cik, accession_number):
 
 import re
 
+
+# Parses specific sections from an SEC filing using BeautifulSoup.
 def parse_filing_content(filing_content, sections=['Item 1A. Risk Factors', "Management's Discussion and Analysis"]):
     soup = BeautifulSoup(filing_content, 'html.parser')
     extracted_data = {}

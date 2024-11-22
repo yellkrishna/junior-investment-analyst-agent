@@ -9,7 +9,7 @@ import numpy as np
 from pathlib import Path
 from autogen_agentchat.messages import ToolCallResultMessage, FunctionExecutionResult
 
-# Function to load custom CSS (if you have any)
+# Function to load custom CSS
 def load_css(css_path):
     with open(css_path) as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
@@ -30,6 +30,7 @@ def list_existing_plots(project_dir, plot_type):
         st.warning(f"Plot directory does not exist: {dir_path}")
     return plots
 
+# Function to clean content strings by replacing problematic patterns
 def clean_content_string(content_str):
     # Replace Timestamp('...') with '...'
     timestamp_pattern = r"Timestamp\('([^']+)'\)"
