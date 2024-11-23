@@ -10,6 +10,7 @@ from scipy.stats import linregress
 
 #!pip install yfinance matplotlib pytz numpy pandas python-dotenv requests bs4
 
+# Define the main stock analysis function
 def analyze_stock(ticker: str, benchmark_ticker: str = '^GSPC') -> dict:
     import os
     from datetime import datetime, timedelta

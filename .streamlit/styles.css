@@ -34,7 +34,7 @@ div[data-testid="stAppViewContainer"] {
 /* Adjust the sidebar styling */
 div[data-testid="stSidebar"] {
     background-color: #ffffff; /* White background for sidebar */
-    padding: 1rem;
+    padding: 0;
     border-right: 1px solid #e0e0e0; /* Subtle border */
 }
 
@@ -364,6 +364,19 @@ img:hover {
 ::-webkit-scrollbar-thumb:hover {
     background-color: #a8a8a8;
 }
+
+.scrollable-questions {
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Disabled input field styling */
+.disabled-input {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+
 
 /* ================================
    12. Dark Mode Support (Optional)

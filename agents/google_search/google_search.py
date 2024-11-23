@@ -8,6 +8,7 @@ from agents.fundamental_analysis.fundamental_analysis_agent import fundamental_a
 
 #!pip install yfinance matplotlib pytz numpy pandas python-dotenv requests bs4
 
+# Function to perform a Google search
 def google_search(query: str, num_results: int = 2, max_chars: int = 500) -> list:  # type: ignore[type-arg]
     import os
     import time
@@ -35,6 +36,7 @@ def google_search(query: str, num_results: int = 2, max_chars: int = 500) -> lis
 
     results = response.json().get("items", [])
 
+    # Function to fetch and preprocess page content from a given URL
     def get_page_content(url: str) -> str:
         try:
             response = requests.get(url, timeout=10)
@@ -51,6 +53,7 @@ def google_search(query: str, num_results: int = 2, max_chars: int = 500) -> lis
             print(f"Error fetching {url}: {str(e)}")
             return ""
 
+    # Enrich search results by adding processed content from each URL
     enriched_results = []
     for item in results:
         body = get_page_content(item["link"])
@@ -61,14 +64,14 @@ def google_search(query: str, num_results: int = 2, max_chars: int = 500) -> lis
 
     return enriched_results
 
-# Wrap the function tool to the functions
+# Wrap the Google search function into a tool for agent usage
 google_search_tool = FunctionTool(
     google_search,
     description="Function to search Google for a company's stock ticker, benchmark ticker, and comprehensive information. "
         "Returns top results with snippets and content relevant for financial and SWOT analysis."
 )
 
-# Create agents
+# Initialize the OpenAI model client for use by the agents
 model_client = OpenAIChatCompletionClient(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
 
 search_agent = AssistantAgent(
