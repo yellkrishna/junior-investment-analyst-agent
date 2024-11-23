@@ -258,7 +258,7 @@ Copy code
 
 ### 2\. Access the Application
 
-After running the above command, Streamlit will provide a local URL (usually `http://localhost:8501/`). Open this URL in your web browser to access the application.
+After running the above command, Streamlit will provide a local URL (usually `http://localhost:8501/`). Open this URL in your web browser to access the application. Please be patient, it takes a minute for the application to load. 
 
 Usage
 -----
